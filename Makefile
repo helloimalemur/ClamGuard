@@ -1,14 +1,14 @@
-# Makefile for osx-dek-rs
+# Makefile for clamguard
 
-BINARY_NAME=osx-dek-rs
+BINARY_NAME=clamguard
 TARGET_DIR=target/release
-INSTALL_DIR=$(HOME)/Library/Application\ Support/osx-dek-rs
-PLIST_NAME=com.osx-dek-rs.plist
+INSTALL_DIR=$(HOME)/Library/Application\ Support/clamguard
+PLIST_NAME=com.clamguard.plist
 PLIST_PATH=$(HOME)/Library/LaunchAgents/$(PLIST_NAME)
-LOG_DIR=$(HOME)/Library/Logs/osx-dek-rs
+LOG_DIR=$(HOME)/Library/Logs/clamguard
 
-AGENT_LOG_DIR=$(HOME)/Library/Logs/osx-dek-rs
-APP_NAME=OSX-Detect-External-Disk.app
+AGENT_LOG_DIR=$(HOME)/Library/Logs/clamguard
+APP_NAME=ClamGuard.app
 APP_CONTENTS=$(APP_NAME)/Contents
 
 .PHONY: all build install uninstall clean logs audit install-agent uninstall-agent install-daemon uninstall-daemon scans logs-agent app
@@ -71,7 +71,7 @@ install-agent: build
 	@echo "Installing LaunchAgent..."
 	mkdir -p $(HOME)/Library/LaunchAgents
 	# Update plist paths during copy to use user-local paths
-	sed 's|/usr/local/bin/osx-dek-rs|$(INSTALL_DIR)/$(BINARY_NAME)|g; s|/Library/Logs/osx-dek-rs|$(LOG_DIR)|g' $(PLIST_NAME) > $(PLIST_PATH)
+	sed 's|/usr/local/bin/clamguard|$(INSTALL_DIR)/$(BINARY_NAME)|g; s|/Library/Logs/clamguard|$(LOG_DIR)|g' $(PLIST_NAME) > $(PLIST_PATH)
 	chmod 644 $(PLIST_PATH)
 
 	@echo "Loading service..."
@@ -105,10 +105,10 @@ app: build
 
 logs:
 	@echo "Showing both system and user logs (if available)..."
-	-tail -f $(LOG_DIR)/stdout.log $(LOG_DIR)/stderr.log $(AGENT_LOG_DIR)/audit.log $(AGENT_LOG_DIR)/clamav_external_scans.log /tmp/osx-dek-rs.agent.stdout.log /tmp/osx-dek-rs.agent.stderr.log 2>/dev/null
+	-tail -f $(LOG_DIR)/stdout.log $(LOG_DIR)/stderr.log $(AGENT_LOG_DIR)/audit.log $(AGENT_LOG_DIR)/clamav_external_scans.log /tmp/clamguard.agent.stdout.log /tmp/clamguard.agent.stderr.log 2>/dev/null
 
 logs-agent:
-	tail -f $(AGENT_LOG_DIR)/audit.log $(AGENT_LOG_DIR)/clamav_external_scans.log /tmp/osx-dek-rs.agent.stdout.log /tmp/osx-dek-rs.agent.stderr.log
+	tail -f $(AGENT_LOG_DIR)/audit.log $(AGENT_LOG_DIR)/clamav_external_scans.log /tmp/clamguard.agent.stdout.log /tmp/clamguard.agent.stderr.log
 
 audit:
 	-tail -f $(LOG_DIR)/audit.log $(AGENT_LOG_DIR)/audit.log

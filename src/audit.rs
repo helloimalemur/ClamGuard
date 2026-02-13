@@ -16,10 +16,10 @@ pub fn get_audit_log_dir() -> String {
         .unwrap_or(false);
 
     if is_root {
-        "/Library/Logs/osx-dek-rs".to_string()
+        "/Library/Logs/clamguard".to_string()
     } else {
         let home = std::env::var("HOME").unwrap_or_else(|_| "/tmp".to_string());
-        format!("{}/Library/Logs/osx-dek-rs", home)
+        format!("{}/Library/Logs/clamguard", home)
     }
 }
 
@@ -96,11 +96,11 @@ pub fn log_update_complete(success: bool, details: &str) {
 }
 
 pub fn log_service_start() {
-    log_event("SERVICE_START", "OSX-Detect-External-Disk service starting");
+    log_event("SERVICE_START", "ClamGuard service starting");
 }
 
 pub fn log_service_stop() {
-    log_event("SERVICE_STOP", "OSX-Detect-External-Disk service stopping");
+    log_event("SERVICE_STOP", "ClamGuard service stopping");
 }
 
 pub fn log_error(context: &str, error: &str) {

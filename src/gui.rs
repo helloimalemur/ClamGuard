@@ -119,7 +119,7 @@ impl eframe::App for SettingsApp {
 
 impl SettingsApp {
     fn show_settings(&mut self, ui: &mut egui::Ui) {
-        ui.heading("OSX-Detect-External-Disk Settings");
+        ui.heading("ClamGuard Settings");
         ui.separator();
 
         ui.add_space(10.0);

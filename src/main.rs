@@ -110,7 +110,7 @@ fn main() -> Result<()> {
 
     let args: Vec<String> = std::env::args().collect();
     if args.contains(&"--version".to_string()) || args.contains(&"-v".to_string()) {
-        println!("osx-dek-rs version {}", env!("CARGO_PKG_VERSION"));
+        println!("clamguard version {}", env!("CARGO_PKG_VERSION"));
         return Ok(());
     }
 
@@ -142,12 +142,12 @@ fn main() -> Result<()> {
         viewport: eframe::egui::ViewportBuilder::default()
             .with_inner_size([450.0, 450.0])
             .with_visible(false)
-            .with_title("OSX-Detect-External-Disk Settings"),
+            .with_title("ClamGuard Settings"),
         ..Default::default()
     };
 
     eframe::run_native(
-        "OSX-Detect-External-Disk",
+        "ClamGuard",
         options,
         Box::new(|cc| {
             Ok(Box::new(DekApp::new(cc, app_state)))
@@ -181,7 +181,7 @@ impl DekApp {
         let tray = TrayIconBuilder::new()
             .with_menu(Box::new(menu))
             .with_icon(create_icon(IconState::Idle))
-            .with_tooltip("OSX-Detect-External-Disk")
+            .with_tooltip("ClamGuard")
             .build()
             .unwrap();
 

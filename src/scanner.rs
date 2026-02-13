@@ -78,7 +78,7 @@ fn get_clamav_datadir(is_root: bool) -> Option<String> {
         None // Use system default
     } else {
         let home = std::env::var("HOME").unwrap_or_else(|_| "/tmp".to_string());
-        let user_datadir = format!("{}/Library/Caches/osx-dek-rs/clamav", home);
+        let user_datadir = format!("{}/Library/Caches/clamguard/clamav", home);
         if fs::create_dir_all(&user_datadir).is_ok() {
             Some(user_datadir)
         } else {

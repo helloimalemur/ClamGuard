@@ -22,13 +22,13 @@ This is the easiest way to install the application as a **LaunchAgent** (user se
    To run without opening a terminal window, it is recommended to build the application bundle:
    ```bash
    make app
-   open OSX-Detect-External-Disk.app
+   open ClamGuard.app
    ```
    *Alternatively, run the raw binary (will open Terminal):*
    ```bash
-   ./target/release/osx-dek-rs
+   ./target/release/clamguard
    ```
-3. **Install as Service:** Click the tray icon in the macOS menu bar and select **"Install as Service"**. The application will be copied to `~/Library/Application Support/osx-dek-rs` and registered as a LaunchAgent.
+3. **Install as Service:** Click the tray icon in the macOS menu bar and select **"Install as Service"**. The application will be copied to `~/Library/Application Support/clamguard` and registered as a LaunchAgent.
 
 ### Option 2: Manual Installation (LaunchAgent - Recommended)
 
@@ -44,14 +44,14 @@ This option installs the application as a `LaunchAgent`, which runs in the user 
    make install
    ```
 
-   This will install the binary to `~/Library/Application Support/osx-dek-rs` and create a LaunchAgent.
+   This will install the binary to `~/Library/Application Support/clamguard` and create a LaunchAgent.
 
    *Alternatively, follow the manual steps below:*
 
 3. **Copy the binary to a user path:**
    ```bash
-   mkdir -p "~/Library/Application Support/osx-dek-rs"
-   cp target/release/osx-dek-rs "~/Library/Application Support/osx-dek-rs/osx-dek-rs"
+   mkdir -p "~/Library/Application Support/clamguard"
+   cp target/release/clamguard "~/Library/Application Support/clamguard/clamguard"
    ```
 
 4. **Create the LaunchAgent directory (if it doesn't exist):**
@@ -62,12 +62,12 @@ This option installs the application as a `LaunchAgent`, which runs in the user 
 5. **Copy the Agent Plist:**
    Ensure the plist points to the correct binary location.
    ```bash
-   cp com.osx-dek-rs.plist ~/Library/LaunchAgents/com.osx-dek-rs.plist
+   cp com.clamguard.plist ~/Library/LaunchAgents/com.clamguard.plist
    ```
 
 6. **Load the Agent:**
    ```bash
-   launchctl load -w ~/Library/LaunchAgents/com.osx-dek-rs.plist
+   launchctl load -w ~/Library/LaunchAgents/com.clamguard.plist
    ```
 
    The tray icon should now appear in your menu bar.
@@ -87,7 +87,7 @@ This option installs the application as a `LaunchAgent`, which runs in the user 
 - **Automatic Reports**: Sends the full ClamAV scan summary in the notification.
 - **Automatic Ejection**: Can automatically eject the external drive if infected files are found.
 - **Database Updates**: Runs `freshclam` on startup and at a regular interval (default 12 hours) to keep virus definitions current.
-- **PCI Audit Logging**: Maintains a dedicated audit log at `/Library/Logs/osx-dek-rs/audit.log` for PCI DSS compliance proof.
+- **PCI Audit Logging**: Maintains a dedicated audit log at `/Library/Logs/clamguard/audit.log` for PCI DSS compliance proof.
 
 ## PCI DSS Compliance
 
@@ -100,13 +100,13 @@ Specifically, it addresses:
 
 ### Audit Evidence for PCI
 The following files provide the necessary evidence for PCI audits:
-1.  **/Library/Logs/osx-dek-rs/audit.log**: A high-level chronological log of all security events, including:
+1.  **/Library/Logs/clamguard/audit.log**: A high-level chronological log of all security events, including:
     - Service start/stop.
     - Detection of newly mounted external disks.
     - Start and completion of scans with pass/fail status.
     - Malware detections with infected path details.
     - ClamAV database update attempts and results.
-2.  **/Library/Logs/osx-dek-rs/clamav_external_scans.log**: Detailed ClamAV scan reports for every drive scanned.
+2.  **/Library/Logs/clamguard/clamav_external_scans.log**: Detailed ClamAV scan reports for every drive scanned.
 
 ### Configuration for PCI
 For strict PCI compliance, it is recommended to:
@@ -122,7 +122,7 @@ To enable automatic ejection of infected drives, you can use the `--eject` comma
 
 Example with CLI flag:
 ```bash
-/usr/local/bin/osx-dek-rs --eject
+/usr/local/bin/clamguard --eject
 ```
 
 Example with environment variable:
@@ -131,13 +131,13 @@ export EJECT_ON_INFECTION=true
 ```
 
 ### Service Configuration (LaunchDaemon)
-If you want to enable ejection when running as a service, update your `/Library/LaunchDaemons/com.osx-dek-rs.plist` file.
+If you want to enable ejection when running as a service, update your `/Library/LaunchDaemons/com.clamguard.plist` file.
 
 To use the CLI flag, add it to `ProgramArguments`:
 ```xml
 <key>ProgramArguments</key>
 <array>
-    <string>/usr/local/bin/osx-dek-rs</string>
+    <string>/usr/local/bin/clamguard</string>
     <string>--eject</string>
 </array>
 ```
@@ -206,13 +206,13 @@ You can fix this by:
 The application uses dynamic log paths based on the user running the service:
 
 - **When running as root (LaunchDaemon):**
-    - Audit log: `/Library/Logs/osx-dek-rs/audit.log`
-    - Scan outputs: `/Library/Logs/osx-dek-rs/clamav_external_scans.log`
-    - Service stdout/stderr: `/Library/Logs/osx-dek-rs/stdout.log` and `stderr.log`
+    - Audit log: `/Library/Logs/clamguard/audit.log`
+    - Scan outputs: `/Library/Logs/clamguard/clamav_external_scans.log`
+    - Service stdout/stderr: `/Library/Logs/clamguard/stdout.log` and `stderr.log`
 - **When running as a user (LaunchAgent):**
-    - Audit log: `~/Library/Logs/osx-dek-rs/audit.log`
-    - Scan outputs: `~/Library/Logs/osx-dek-rs/clamav_external_scans.log`
-    - Service stdout/stderr: `/tmp/osx-dek-rs.agent.stdout.log` and `stderr.log`
+    - Audit log: `~/Library/Logs/clamguard/audit.log`
+    - Scan outputs: `~/Library/Logs/clamguard/clamav_external_scans.log`
+    - Service stdout/stderr: `/tmp/clamguard.agent.stdout.log` and `stderr.log`
 
 *Note: If the preferred log directory is not writable, the application will fallback to creating `audit_fallback.log` and `clamav_external_scans.log` in the current working directory.*
 
@@ -223,7 +223,7 @@ When running as a `LaunchAgent` (as a normal user), the application may encounte
 To ensure comprehensive scanning, you should grant **Full Disk Access** to the binary:
 1. Open **System Settings** > **Privacy & Security** > **Full Disk Access**.
 2. Click the **+** button.
-3. Press `Cmd + Shift + G` and type `/usr/local/bin/osx-dek-rs`.
+3. Press `Cmd + Shift + G` and type `/usr/local/bin/clamguard`.
 4. Ensure the toggle is turned **ON**.
 
 When running as a `LaunchDaemon` (as `root`), the application generally has the necessary permissions, but Full Disk Access is still recommended on newer macOS versions for complete coverage.
@@ -248,25 +248,25 @@ If you prefer to remove files manually, follow these steps:
 
 1. **Unload and remove LaunchAgent (if installed):**
    ```bash
-   launchctl unload -w ~/Library/LaunchAgents/com.osx-dek-rs.plist
-   rm ~/Library/LaunchAgents/com.osx-dek-rs.plist
+   launchctl unload -w ~/Library/LaunchAgents/com.clamguard.plist
+   rm ~/Library/LaunchAgents/com.clamguard.plist
    ```
 
 2. **Unload and remove LaunchDaemon (if installed):**
    ```bash
-   sudo launchctl unload -w /Library/LaunchDaemons/com.osx-dek-rs.plist
-   sudo rm /Library/LaunchDaemons/com.osx-dek-rs.plist
+   sudo launchctl unload -w /Library/LaunchDaemons/com.clamguard.plist
+   sudo rm /Library/LaunchDaemons/com.clamguard.plist
    ```
 
 3. **Remove the binary:**
    ```bash
-   sudo rm /usr/local/bin/osx-dek-rs
+   sudo rm /usr/local/bin/clamguard
    ```
 
 4. **(Optional) Remove logs:**
    ```bash
-   rm -rf ~/Library/Logs/osx-dek-rs/
-   sudo rm -rf /Library/Logs/osx-dek-rs/
+   rm -rf ~/Library/Logs/clamguard/
+   sudo rm -rf /Library/Logs/clamguard/
    ```
 
 ## Deployment

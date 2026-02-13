@@ -3,19 +3,19 @@
 <plist version="1.0">
 <dict>
     <key>Label</key>
-    <string>com.osx-dek-rs</string>
+    <string>com.clamguard</string>
     <key>ProgramArguments</key>
     <array>
-        <string>/usr/local/bin/osx-dek-rs</string>
+        <string>/usr/local/bin/clamguard</string>
     </array>
     <key>RunAtLoad</key>
     <true/>
     <key>KeepAlive</key>
     <true/>
     <key>StandardOutPath</key>
-    <string>/Library/Logs/osx-dek-rs/stdout.log</string>
+    <string>/Library/Logs/clamguard/stdout.log</string>
     <key>StandardErrorPath</key>
-    <string>/Library/Logs/osx-dek-rs/stderr.log</string>
+    <string>/Library/Logs/clamguard/stderr.log</string>
     <key>ProcessType</key>
     <string>Background</string>
     <key>LowPriorityIO</key>

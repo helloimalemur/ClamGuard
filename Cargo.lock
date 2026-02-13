@@ -931,6 +931,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "clamguard"
+version = "0.2.2"
+dependencies = [
+ "anyhow",
+ "chrono",
+ "csv",
+ "eframe",
+ "env_logger",
+ "image",
+ "log",
+ "notify",
+ "regex",
+ "reqwest",
+ "rfd",
+ "serde",
+ "serde_json",
+ "tao",
+ "tray-icon",
+]
+
+[[package]]
 name = "clipboard-win"
 version = "5.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3554,27 +3575,6 @@ checksum = "9aa2b01e1d916879f73a53d01d1d6cee68adbb31d6d9177a8cfce093cced1d50"
 dependencies = [
  "futures-core",
  "pin-project-lite",
-]
-
-[[package]]
-name = "osx-dek-rs"
-version = "0.2.1"
-dependencies = [
- "anyhow",
- "chrono",
- "csv",
- "eframe",
- "env_logger",
- "image",
- "log",
- "notify",
- "regex",
- "reqwest",
- "rfd",
- "serde",
- "serde_json",
- "tao",
- "tray-icon",
 ]
 
 [[package]]

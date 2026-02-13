@@ -56,10 +56,10 @@ impl Config {
             .unwrap_or(false);
 
         if is_root {
-            PathBuf::from("/Library/Application Support/osx-dek-rs/config.json")
+            PathBuf::from("/Library/Application Support/clamguard/config.json")
         } else {
             let home = std::env::var("HOME").unwrap_or_else(|_| "/tmp".to_string());
-            PathBuf::from(format!("{}/Library/Application Support/osx-dek-rs/config.json", home))
+            PathBuf::from(format!("{}/Library/Application Support/clamguard/config.json", home))
         }
     }
 

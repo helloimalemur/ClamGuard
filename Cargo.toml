@@ -1,6 +1,6 @@
 [package]
-name = "osx-dek-rs"
-version = "0.2.1"
+name = "clamguard"
+version = "0.2.2"
 edition = "2024"
 license = "MIT"
 description = "macOS External Disk ClamAV Scanner"

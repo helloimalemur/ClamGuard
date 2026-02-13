@@ -26,12 +26,12 @@ jobs:
 
       - name: Zip App Bundle
         run: |
-          zip -r OSX-Detect-External-Disk.zip OSX-Detect-External-Disk.app
+          zip -r ClamGuard.zip ClamGuard.app
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          files: OSX-Detect-External-Disk.zip
+          files: ClamGuard.zip
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GTOKEN }}

@@ -78,11 +78,11 @@ pub fn create_icon(state: IconState) -> Icon {
 }
 
 pub fn is_service_installed() -> bool {
-    if Path::new("/Library/LaunchDaemons/com.osx-dek-rs.plist").exists() {
+    if Path::new("/Library/LaunchDaemons/com.clamguard.plist").exists() {
         return true;
     }
     if let Ok(home) = std::env::var("HOME") {
-        if Path::new(&home).join("Library/LaunchAgents/com.osx-dek-rs.plist").exists() {
+        if Path::new(&home).join("Library/LaunchAgents/com.clamguard.plist").exists() {
             return true;
         }
     }
@@ -95,11 +95,11 @@ pub fn install_as_service() -> Result<()> {
     let home = std::env::var("HOME").unwrap_or_else(|_| "/tmp".to_string());
     
     // Use user-local paths to avoid root/system installation
-    let support_dir = format!("{}/Library/Application Support/osx-dek-rs", home);
-    let target_bin = format!("{}/osx-dek-rs", support_dir);
+    let support_dir = format!("{}/Library/Application Support/clamguard", home);
+    let target_bin = format!("{}/clamguard", support_dir);
     let plist_dir = format!("{}/Library/LaunchAgents", home);
-    let plist_path = format!("{}/com.osx-dek-rs.plist", plist_dir);
-    let log_dir = format!("{}/Library/Logs/osx-dek-rs", home);
+    let plist_path = format!("{}/com.clamguard.plist", plist_dir);
+    let log_dir = format!("{}/Library/Logs/clamguard", home);
     
     info!("Installing service to {}...", target_bin);
 
@@ -126,7 +126,7 @@ pub fn install_as_service() -> Result<()> {
 <plist version="1.0">
 <dict>
     <key>Label</key>
-    <string>com.osx-dek-rs</string>
+    <string>com.clamguard</string>
     <key>ProgramArguments</key>
     <array>
         <string>{target_bin}</string>
@@ -169,8 +169,8 @@ pub fn install_as_service() -> Result<()> {
 
 pub fn uninstall_service() -> Result<()> {
     let home = std::env::var("HOME").unwrap_or_else(|_| "/tmp".to_string());
-    let agent_plist = format!("{}/Library/LaunchAgents/com.osx-dek-rs.plist", home);
-    let user_bin = format!("{}/Library/Application Support/osx-dek-rs/osx-dek-rs", home);
+    let agent_plist = format!("{}/Library/LaunchAgents/com.clamguard.plist", home);
+    let user_bin = format!("{}/Library/Application Support/clamguard/clamguard", home);
     
     // 1. Unload and remove user agent
     if Path::new(&agent_plist).exists() {
@@ -184,8 +184,8 @@ pub fn uninstall_service() -> Result<()> {
     }
 
     // 3. Handle legacy root installation
-    let legacy_bin = "/usr/local/bin/osx-dek-rs";
-    let legacy_daemon = "/Library/LaunchDaemons/com.osx-dek-rs.plist";
+    let legacy_bin = "/usr/local/bin/clamguard";
+    let legacy_daemon = "/Library/LaunchDaemons/com.clamguard.plist";
     
     if Path::new(legacy_bin).exists() || Path::new(legacy_daemon).exists() {
         info!("Legacy root installation detected, requesting privileges to clean up...");
