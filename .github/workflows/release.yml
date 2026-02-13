@@ -20,13 +20,30 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: stable
+          targets: x86_64-apple-darwin, aarch64-apple-darwin
+
+      - name: Build for both architectures
+        run: |
+          cargo build --release --target x86_64-apple-darwin
+          cargo build --release --target aarch64-apple-darwin
+
+      - name: Create Universal Binary
+        run: |
+          mkdir -p target/universal/release
+          lipo -create -output target/universal/release/clamguard \
+            target/x86_64-apple-darwin/release/clamguard \
+            target/aarch64-apple-darwin/release/clamguard
 
       - name: Build App Bundle
-        run: make app
+        run: make app TARGET_DIR=target/universal/release
+
+      - name: Ad-hoc Sign App
+        run: |
+          codesign -s - --force ClamGuard.app/Contents/MacOS/clamguard
 
       - name: Zip App Bundle
         run: |
-          zip -r ClamGuard.zip ClamGuard.app
+          ditto -c -k --sequesterRsrc --keepParent ClamGuard.app ClamGuard.zip
 
       - name: Create Release
         uses: softprops/action-gh-release@v2

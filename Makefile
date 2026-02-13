@@ -100,6 +100,7 @@ app: build
 	mkdir -p $(APP_CONTENTS)/Resources
 	cp $(TARGET_DIR)/$(BINARY_NAME) $(APP_CONTENTS)/MacOS/$(BINARY_NAME)
 	cp Info.plist $(APP_CONTENTS)/Info.plist
+	echo "APPL????" > $(APP_CONTENTS)/PkgInfo
 	chmod +x $(APP_CONTENTS)/MacOS/$(BINARY_NAME)
 	@echo "Application bundle created. You can now double-click $(APP_NAME) in Finder."
 
