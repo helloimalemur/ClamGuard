@@ -268,3 +268,30 @@ If you prefer to remove files manually, follow these steps:
    rm -rf ~/Library/Logs/osx-dek-rs/
    sudo rm -rf /Library/Logs/osx-dek-rs/
    ```
+
+## Deployment
+
+This project uses GitHub Actions to automate the release process. When a new tag is pushed, a GitHub Release is automatically created with the compiled macOS application bundle.
+
+### Steps to Deploy a New Version
+
+1.  **Update the version** in `Cargo.toml`:
+    - Open `Cargo.toml` and update the `version` field (e.g., from `0.2.0` to `0.2.1`).
+
+2.  **Update the version** in `Info.plist`:
+    - Open `Info.plist` and update the `<string>` value for the `CFBundleShortVersionString` key to match the new version.
+
+3.  **Commit and push the changes**:
+    ```bash
+    git add Cargo.toml Info.plist
+    git commit -m "chore: bump version to v0.2.1"
+    git push origin master
+    ```
+
+4.  **Create and push a new tag**:
+    ```bash
+    git tag v0.2.1
+    git push origin v0.2.1
+    ```
+
+Once the tag is pushed, the **Release** workflow will trigger automatically, build the `.app` bundle, zip it, and create a new GitHub Release with the asset attached.
