@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.osx-dek-rs</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/local/bin/osx-dek-rs</string>
+    </array>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+    <key>StandardOutPath</key>
+    <string>/Library/Logs/osx-dek-rs/stdout.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Library/Logs/osx-dek-rs/stderr.log</string>
+    <key>ProcessType</key>
+    <string>Background</string>
+    <key>LowPriorityIO</key>
+    <true/>
+    <key>Nice</key>
+    <integer>5</integer>
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>EJECT_ON_INFECTION</key>
+        <string>true</string>
+        <key>DISCORD_WEBHOOKS</key>
+        <string></string>
+        <key>SLACK_WEBHOOKS</key>
+        <string></string>
+        <key>FRESHCLAM_INTERVAL_HOURS</key>
+        <string>12</string>
+    </dict>
+</dict>
+</plist>

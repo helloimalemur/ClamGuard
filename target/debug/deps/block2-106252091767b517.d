@@ -1,0 +1,14 @@
+/Users/foxx/RustroverProjects/OSX-Detect-External-Disk-rs/target/debug/deps/block2-106252091767b517.d: /Users/foxx/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/block2-0.6.2/src/lib.rs /Users/foxx/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/block2-0.6.2/src/abi.rs /Users/foxx/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/block2-0.6.2/src/block.rs /Users/foxx/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/block2-0.6.2/src/debug.rs /Users/foxx/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/block2-0.6.2/src/encoding.rs /Users/foxx/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/block2-0.6.2/src/ffi.rs /Users/foxx/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/block2-0.6.2/src/global.rs /Users/foxx/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/block2-0.6.2/src/rc_block.rs /Users/foxx/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/block2-0.6.2/src/stack.rs /Users/foxx/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/block2-0.6.2/src/traits.rs
+
+/Users/foxx/RustroverProjects/OSX-Detect-External-Disk-rs/target/debug/deps/libblock2-106252091767b517.rmeta: /Users/foxx/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/block2-0.6.2/src/lib.rs /Users/foxx/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/block2-0.6.2/src/abi.rs /Users/foxx/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/block2-0.6.2/src/block.rs /Users/foxx/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/block2-0.6.2/src/debug.rs /Users/foxx/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/block2-0.6.2/src/encoding.rs /Users/foxx/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/block2-0.6.2/src/ffi.rs /Users/foxx/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/block2-0.6.2/src/global.rs /Users/foxx/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/block2-0.6.2/src/rc_block.rs /Users/foxx/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/block2-0.6.2/src/stack.rs /Users/foxx/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/block2-0.6.2/src/traits.rs
+
+/Users/foxx/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/block2-0.6.2/src/lib.rs:
+/Users/foxx/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/block2-0.6.2/src/abi.rs:
+/Users/foxx/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/block2-0.6.2/src/block.rs:
+/Users/foxx/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/block2-0.6.2/src/debug.rs:
+/Users/foxx/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/block2-0.6.2/src/encoding.rs:
+/Users/foxx/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/block2-0.6.2/src/ffi.rs:
+/Users/foxx/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/block2-0.6.2/src/global.rs:
+/Users/foxx/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/block2-0.6.2/src/rc_block.rs:
+/Users/foxx/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/block2-0.6.2/src/stack.rs:
+/Users/foxx/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/block2-0.6.2/src/traits.rs:
