@@ -20,6 +20,22 @@ use crate::scanner::{run_clamscan, run_freshclam};
 use crate::utils::{find_clamscan, find_freshclam, create_icon, is_service_installed, install_as_service, uninstall_service, IconState};
 use crate::config::Config;
 
+#[cfg(target_os = "macos")]
+#[unsafe(link_section = "__TEXT,__info_plist")]
+#[used]
+static INFO_PLIST: [u8; include_bytes!("../Info.plist").len()] = *include_bytes!("../Info.plist");
+
+#[cfg(target_os = "macos")]
+fn hide_dock_icon() {
+    use objc2_app_kit::{NSApplication, NSApplicationActivationPolicy};
+    use objc2::MainThreadMarker;
+    if let Some(mtm) = MainThreadMarker::new() {
+        let app = NSApplication::sharedApplication(mtm);
+        debug!("Setting macOS activation policy to Accessory");
+        let _ = app.setActivationPolicy(NSApplicationActivationPolicy::Accessory);
+    }
+}
+
 use crate::gui::SettingsApp;
 use crate::history::ScanStatus;
 use tray_icon::{
@@ -95,6 +111,9 @@ fn main() -> Result<()> {
     // Initialize logger to write to stdout/stderr. 
     env_logger::init_from_env(env_logger::Env::default().default_filter_or("info"));
 
+    #[cfg(target_os = "macos")]
+    hide_dock_icon();
+
     let config = Config::load();
     let history = crate::history::History::load();
 
@@ -143,6 +162,10 @@ fn main() -> Result<()> {
             .with_inner_size([450.0, 450.0])
             .with_visible(false)
             .with_title("ClamGuard Settings"),
+        event_loop_builder: Some(Box::new(|_builder| {
+            #[cfg(target_os = "macos")]
+            hide_dock_icon();
+        })),
         ..Default::default()
     };
 
@@ -172,6 +195,9 @@ struct DekApp {
 
 impl DekApp {
     fn new(cc: &eframe::CreationContext<'_>, app_state: Arc<AppState>) -> Self {
+        #[cfg(target_os = "macos")]
+        hide_dock_icon();
+
         if let Ok(mut ctx_lock) = app_state.egui_ctx.lock() {
             *ctx_lock = Some(cc.egui_ctx.clone());
         }
