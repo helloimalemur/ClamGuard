@@ -1,0 +1,37 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  release:
+    name: Build and Release
+    runs-on: macos-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+
+      - name: Build App Bundle
+        run: make app
+
+      - name: Zip App Bundle
+        run: |
+          zip -r OSX-Detect-External-Disk.zip OSX-Detect-External-Disk.app
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: OSX-Detect-External-Disk.zip
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
