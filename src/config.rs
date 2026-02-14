@@ -1,8 +1,8 @@
+use anyhow::Result;
+use log::{error, info};
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
-use log::{info, error};
-use anyhow::Result;
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub enum ScheduleInterval {
@@ -59,7 +59,10 @@ impl Config {
             PathBuf::from("/Library/Application Support/clamguard/config.json")
         } else {
             let home = std::env::var("HOME").unwrap_or_else(|_| "/tmp".to_string());
-            PathBuf::from(format!("{}/Library/Application Support/clamguard/config.json", home))
+            PathBuf::from(format!(
+                "{}/Library/Application Support/clamguard/config.json",
+                home
+            ))
         }
     }
 

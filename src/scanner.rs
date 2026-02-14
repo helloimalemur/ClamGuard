@@ -1,91 +1,19 @@
-use std::collections::HashSet;
-use std::fs;
-use std::path::Path;
-use std::process::{Command, Stdio};
-use std::fs::OpenOptions;
-use std::io::{BufRead, BufReader, Write};
-use log::{info, error, warn};
+use crate::config::Config;
+use crate::guard::AppState;
+use crate::utils::{find_clamscan, find_freshclam};
+use crate::{audit, notifications, utils};
 use anyhow::Result;
+use log::{error, info, warn};
 use regex::Regex;
 use serde::Serialize;
-use crate::utils::{find_clamscan, find_freshclam};
-use crate::config::Config;
-use crate::audit;
-use crate::guard::AppState;
+use std::collections::HashSet;
+use std::fs;
+use std::fs::OpenOptions;
+use std::io::{BufRead, BufReader, Write};
+use std::path::Path;
+use std::process::{Command, Stdio};
 use std::sync::Arc;
 use std::sync::atomic::Ordering;
-
-#[derive(Serialize)]
-struct DiscordPayload {
-    content: String,
-}
-
-#[derive(Serialize)]
-struct SlackPayload {
-    text: String,
-}
-
-fn send_notifications(summary: &str, target_path: &str) {
-    let message = format!("🚨 **Infected items found on {}** 🚨\n\n```\n{}\n```", target_path, summary);
-    let client = reqwest::blocking::Client::new();
-    let config = Config::load();
-
-    let discord_urls = config.discord_webhooks;
-    if !discord_urls.is_empty() {
-        for url in discord_urls.split(',') {
-            let url = url.trim();
-            if !url.is_empty() {
-                let payload = DiscordPayload { content: message.clone() };
-                match client.post(url).json(&payload).send() {
-                    Ok(_) => info!("Sent Discord notification"),
-                    Err(e) => error!("Failed to send Discord notification: {}", e),
-                }
-            }
-        }
-    }
-
-    let slack_urls = config.slack_webhooks;
-    if !slack_urls.is_empty() {
-        for url in slack_urls.split(',') {
-            let url = url.trim();
-            if !url.is_empty() {
-                let payload = SlackPayload { text: message.clone() };
-                match client.post(url).json(&payload).send() {
-                    Ok(_) => info!("Sent Slack notification"),
-                    Err(e) => error!("Failed to send Slack notification: {}", e),
-                }
-            }
-        }
-    }
-}
-
-fn eject_drive(path: &str) {
-    info!("Attempting to eject drive at: {}", path);
-    // On macOS, diskutil eject is the standard way to unmount and eject a volume.
-    match Command::new("diskutil").arg("eject").arg(path).status() {
-        Ok(status) if status.success() => info!("Successfully ejected {}", path),
-        Ok(status) => error!("Failed to eject {}: exit code {:?}", path, status.code()),
-        Err(e) => error!("Failed to execute diskutil: {}", e),
-    }
-}
-
-fn get_clamav_datadir(is_root: bool) -> Option<String> {
-    if let Ok(datadir) = std::env::var("FRESHCLAM_DATADIR") {
-        return Some(datadir);
-    }
-    
-    if is_root {
-        None // Use system default
-    } else {
-        let home = std::env::var("HOME").unwrap_or_else(|_| "/tmp".to_string());
-        let user_datadir = format!("{}/Library/Caches/clamguard/clamav", home);
-        if fs::create_dir_all(&user_datadir).is_ok() {
-            Some(user_datadir)
-        } else {
-            None
-        }
-    }
-}
 
 pub fn run_freshclam() -> Result<()> {
     let freshclam_path = find_freshclam();
@@ -93,7 +21,7 @@ pub fn run_freshclam() -> Result<()> {
     info!("Running freshclam update using: {}", freshclam_path);
 
     let mut cmd = Command::new(&freshclam_path);
-    
+
     // Check if we are running as root
     let is_root = std::process::Command::new("id")
         .arg("-u")
@@ -109,7 +37,7 @@ pub fn run_freshclam() -> Result<()> {
         cmd.arg("--user=root");
     }
 
-    if let Some(datadir) = get_clamav_datadir(is_root) {
+    if let Some(datadir) = utils::get_clamav_datadir(is_root) {
         info!("Using freshclam datadir: {}", datadir);
         cmd.arg(format!("--datadir={}", datadir));
     }
@@ -133,7 +61,10 @@ pub fn run_freshclam() -> Result<()> {
                 info!("freshclam update completed successfully");
             } else {
                 let status_code = output.status.code().unwrap_or(-1);
-                audit::log_update_complete(false, &format!("Exited with code {}. Output: {}", status_code, combined));
+                audit::log_update_complete(
+                    false,
+                    &format!("Exited with code {}. Output: {}", status_code, combined),
+                );
                 warn!("freshclam update exited with status: {}", status_code);
             }
         }
@@ -146,12 +77,16 @@ pub fn run_freshclam() -> Result<()> {
     Ok(())
 }
 
-pub fn run_clamscan(app_state: Arc<AppState>, target_path: &str, eject_on_infection: bool) -> Result<(bool, String, Vec<String>)> {
+pub fn run_clamscan(
+    app_state: Arc<AppState>,
+    target_path: &str,
+    eject_on_infection: bool,
+) -> Result<(bool, String, Vec<String>)> {
     let clamscan_path = find_clamscan();
     let mut virus_found = false;
     let mut infected_files = Vec::new();
     let re_found = regex::Regex::new(r"^(.*): (.*) FOUND$").unwrap();
-    
+
     let mut dir_exclusions: HashSet<String> = [
         "\\.Spotlight-V100",
         "\\.fseventsd",
@@ -160,7 +95,10 @@ pub fn run_clamscan(app_state: Arc<AppState>, target_path: &str, eject_on_infect
         "\\.TemporaryItems",
         "\\$RECYCLE\\.BIN",
         "System Volume Information",
-    ].iter().map(|s| s.to_string()).collect();
+    ]
+    .iter()
+    .map(|s| s.to_string())
+    .collect();
     let mut file_exclusions = HashSet::new();
 
     // Check for .clamignore at the root of target_path
@@ -196,11 +134,11 @@ pub fn run_clamscan(app_state: Arc<AppState>, target_path: &str, eject_on_infect
         .open(&log_file_path)
         .or_else(|e| {
             let fallback = "clamav_external_scans.log";
-            warn!("Could not open log file {}: {}. Falling back to {}.", log_file_path, e, fallback);
-            OpenOptions::new()
-                .create(true)
-                .append(true)
-                .open(fallback)
+            warn!(
+                "Could not open log file {}: {}. Falling back to {}.",
+                log_file_path, e, fallback
+            );
+            OpenOptions::new().create(true).append(true).open(fallback)
         })
         .map_err(|e| {
             error!("Could not open any log file: {}", e);
@@ -210,22 +148,38 @@ pub fn run_clamscan(app_state: Arc<AppState>, target_path: &str, eject_on_infect
     loop {
         let mut buffer = Vec::new();
         if retry_count == 0 {
-            writeln!(buffer, "\n--- Scan starting for: {} at {} ---", target_path, chrono::Local::now())?;
+            writeln!(
+                buffer,
+                "\n--- Scan starting for: {} at {} ---",
+                target_path,
+                chrono::Local::now()
+            )?;
         } else {
-            writeln!(buffer, "\n--- Retry #{} for: {} at {} ---", retry_count, target_path, chrono::Local::now())?;
-            writeln!(buffer, "Excluding {} files and {} directories (plus defaults)", file_exclusions.len(), dir_exclusions.len() - 7)?;
+            writeln!(
+                buffer,
+                "\n--- Retry #{} for: {} at {} ---",
+                retry_count,
+                target_path,
+                chrono::Local::now()
+            )?;
+            writeln!(
+                buffer,
+                "Excluding {} files and {} directories (plus defaults)",
+                file_exclusions.len(),
+                dir_exclusions.len() - 7
+            )?;
         }
 
         let mut cmd = Command::new(&clamscan_path);
         cmd.arg("-r").arg("--bell");
-        
+
         let is_root = std::process::Command::new("id")
             .arg("-u")
             .output()
             .map(|o| String::from_utf8_lossy(&o.stdout).trim() == "0")
             .unwrap_or(false);
 
-        if let Some(datadir) = get_clamav_datadir(is_root) {
+        if let Some(datadir) = utils::get_clamav_datadir(is_root) {
             cmd.arg(format!("--database={}", datadir));
         }
 
@@ -256,7 +210,8 @@ pub fn run_clamscan(app_state: Arc<AppState>, target_path: &str, eject_on_infect
                         // This looks like a file path being scanned
                         if let Some(colon_idx) = l.find(':') {
                             let file_path = &l[..colon_idx];
-                            app_state_progress.update_scan_status(&target_path_clone, file_path.to_string());
+                            app_state_progress
+                                .update_scan_status(&target_path_clone, file_path.to_string());
                         }
                     }
                     let _ = tx_out.send(l);
@@ -294,7 +249,9 @@ pub fn run_clamscan(app_state: Arc<AppState>, target_path: &str, eject_on_infect
                     }
                 }
             }
-            if killed { break; }
+            if killed {
+                break;
+            }
 
             if let Some(caps) = re_found.captures(&line) {
                 let file_path = caps.get(1).unwrap().as_str().to_string();
@@ -326,11 +283,14 @@ pub fn run_clamscan(app_state: Arc<AppState>, target_path: &str, eject_on_infect
 
         if status.code() == Some(2) && retry_count < MAX_RETRIES {
             let mut found_new_exclusions = false;
-            
+
             // Regexes for permission-related errors
             let re_access_denied = Regex::new(r"^(.*): Access denied$").unwrap();
             let re_cant_open_dir = Regex::new(r"^(.*): Can't open directory\.$").unwrap();
-            let re_libclamav = Regex::new(r"LibClamAV Error: cl_scandir: can't open directory (.*) \(Permission denied\)").unwrap();
+            let re_libclamav = Regex::new(
+                r"LibClamAV Error: cl_scandir: can't open directory (.*) \(Permission denied\)",
+            )
+            .unwrap();
 
             for line in current_stdout.lines() {
                 let line = line.trim();
@@ -354,21 +314,29 @@ pub fn run_clamscan(app_state: Arc<AppState>, target_path: &str, eject_on_infect
 
             if found_new_exclusions {
                 retry_count += 1;
-                writeln!(buffer, "Detected permission issues, retrying with additional exclusions...")?;
+                writeln!(
+                    buffer,
+                    "Detected permission issues, retrying with additional exclusions..."
+                )?;
                 log_file.write_all(&buffer)?;
                 continue;
             }
         }
 
-        writeln!(buffer, "--- Scan finished for: {} at {} with exit code: {} ---", 
-                 target_path, chrono::Local::now(), status)?;
+        writeln!(
+            buffer,
+            "--- Scan finished for: {} at {} with exit code: {} ---",
+            target_path,
+            chrono::Local::now(),
+            status
+        )?;
         log_file.write_all(&buffer)?;
 
         if !status.success() {
             // Clamscan exit codes: 0 = no virus, 1 = virus found, 2 = some error occurred
             if status.code() == Some(1) {
                 warn!("VIRUS DETECTED on {}", target_path);
-                
+
                 let re_infected = Regex::new(r"Infected files: (\d+)").unwrap();
                 let mut infected_count = 0;
                 if let Some(caps) = re_infected.captures(&summary) {
@@ -376,19 +344,26 @@ pub fn run_clamscan(app_state: Arc<AppState>, target_path: &str, eject_on_infect
                         infected_count = m.as_str().parse::<u32>().unwrap_or(0);
                     }
                 }
-                
+
                 if infected_count > 0 {
                     virus_found = true;
                     audit::log_infection(target_path, &summary.replace("\n", " "));
-                    send_notifications(&summary, target_path);
+                    notifications::send_notifications(&summary, target_path);
                     if eject_on_infection {
-                        eject_drive(target_path);
+                        utils::eject_drive(target_path);
                     }
                 } else {
-                    audit::log_scan_complete(target_path, false, "Scan finished with exit code 1 but no infected files found in summary");
+                    audit::log_scan_complete(
+                        target_path,
+                        false,
+                        "Scan finished with exit code 1 but no infected files found in summary",
+                    );
                 }
             } else if status.code() == Some(2) {
-                let msg = format!("clamscan finished with some errors (exit code 2) after {} retries. Check clamav_external_scans.log for details.", retry_count);
+                let msg = format!(
+                    "clamscan finished with some errors (exit code 2) after {} retries. Check clamav_external_scans.log for details.",
+                    retry_count
+                );
                 error!("{}", msg);
                 audit::log_scan_complete(target_path, false, &msg);
                 return Ok((false, msg, infected_files));
@@ -412,14 +387,18 @@ mod tests {
     #[test]
     fn test_error_parsing() {
         let stdout_str = "test_dir/d1/f1: Access denied\ntest_dir/d2: Can't open directory.\n";
-        let stderr_str = "LibClamAV Error: cl_scandir: can't open directory test_dir/d3 (Permission denied)\n";
-        
+        let stderr_str =
+            "LibClamAV Error: cl_scandir: can't open directory test_dir/d3 (Permission denied)\n";
+
         let mut file_exclusions = HashSet::new();
         let mut dir_exclusions = HashSet::new();
-        
+
         let re_access_denied = Regex::new(r"^(.*): Access denied$").unwrap();
         let re_cant_open_dir = Regex::new(r"^(.*): Can't open directory\.$").unwrap();
-        let re_libclamav = Regex::new(r"LibClamAV Error: cl_scandir: can't open directory (.*) \(Permission denied\)").unwrap();
+        let re_libclamav = Regex::new(
+            r"LibClamAV Error: cl_scandir: can't open directory (.*) \(Permission denied\)",
+        )
+        .unwrap();
 
         for line in stdout_str.lines().chain(stderr_str.lines()) {
             let line = line.trim();
@@ -434,7 +413,7 @@ mod tests {
                 dir_exclusions.insert(format!("^{}$", regex::escape(path)));
             }
         }
-        
+
         assert!(file_exclusions.contains("^test_dir/d1/f1$"));
         assert!(dir_exclusions.contains("^test_dir/d2$"));
         assert!(dir_exclusions.contains("^test_dir/d3$"));
@@ -444,7 +423,7 @@ mod tests {
     fn test_clamignore_parsing() {
         let test_ignore = ".test_clamignore";
         fs::write(test_ignore, "# comment\nexclusion1\n\n  exclusion2  \n").unwrap();
-        
+
         let mut file_exclusions = HashSet::new();
         if let Ok(file) = fs::File::open(test_ignore) {
             let reader = BufReader::new(file);
@@ -457,9 +436,9 @@ mod tests {
                 }
             }
         }
-        
+
         fs::remove_file(test_ignore).unwrap();
-        
+
         assert!(file_exclusions.contains("exclusion1"));
         assert!(file_exclusions.contains("exclusion2"));
         assert_eq!(file_exclusions.len(), 2);
@@ -468,7 +447,7 @@ mod tests {
     #[test]
     fn test_summary_parsing() {
         let summary = "----------- SCAN SUMMARY -----------\nKnown viruses: 8684783\nEngine version: 1.1.0\nScanned directories: 1\nScanned files: 1\nInfected files: 2\nData scanned: 0.00 MB\n";
-        
+
         let re_infected = Regex::new(r"Infected files: (\d+)").unwrap();
         let mut infected_count = 0;
         if let Some(caps) = re_infected.captures(summary) {
@@ -476,7 +455,7 @@ mod tests {
                 infected_count = m.as_str().parse::<u32>().unwrap_or(0);
             }
         }
-        
+
         assert_eq!(infected_count, 2);
     }
 }

@@ -1,8 +1,8 @@
-use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
-use std::sync::atomic::{AtomicUsize, AtomicBool, Ordering};
 use crate::config::Config;
 use crate::history::{History, ScanStatus};
+use std::collections::HashMap;
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+use std::sync::{Arc, Mutex};
 
 pub struct ScanState {
     pub current_file: String,
@@ -63,10 +63,13 @@ impl AppState {
     pub fn add_scan(&self, path: String) -> Arc<AtomicBool> {
         let cancel_flag = Arc::new(AtomicBool::new(false));
         if let Ok(mut scans) = self.active_scans.lock() {
-            scans.insert(path.clone(), ScanState {
-                current_file: "Starting...".to_string(),
-                cancel_flag: Arc::clone(&cancel_flag),
-            });
+            scans.insert(
+                path.clone(),
+                ScanState {
+                    current_file: "Starting...".to_string(),
+                    cancel_flag: Arc::clone(&cancel_flag),
+                },
+            );
         }
         self.increment();
         cancel_flag
@@ -101,7 +104,13 @@ impl AppState {
         self.decrement();
     }
 
-    pub fn add_history_entry(&self, path: String, status: ScanStatus, details: String, infected_files: Vec<String>) {
+    pub fn add_history_entry(
+        &self,
+        path: String,
+        status: ScanStatus,
+        details: String,
+        infected_files: Vec<String>,
+    ) {
         if let Ok(mut history) = self.history.lock() {
             history.add_entry(path, status, details, infected_files);
         }

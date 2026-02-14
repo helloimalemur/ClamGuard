@@ -1,9 +1,9 @@
-use std::path::Path;
-use tray_icon::Icon;
 use anyhow::Result;
-use std::process::Command;
-use log::info;
+use log::{error, info};
 use std::fs;
+use std::path::Path;
+use std::process::Command;
+use tray_icon::Icon;
 
 pub fn find_clamscan() -> String {
     let common_paths = [
@@ -48,7 +48,7 @@ pub fn create_icon(state: IconState) -> Icon {
             let dx = x as f32 - (size as f32 / 2.0);
             let dy = y as f32 - (size as f32 / 2.0);
             let dist = (dx * dx + dy * dy).sqrt();
-            
+
             // Draw a circle
             if dist < (size as f32 / 2.0) - 4.0 {
                 match state {
@@ -82,7 +82,10 @@ pub fn is_service_installed() -> bool {
         return true;
     }
     if let Ok(home) = std::env::var("HOME") {
-        if Path::new(&home).join("Library/LaunchAgents/com.clamguard.plist").exists() {
+        if Path::new(&home)
+            .join("Library/LaunchAgents/com.clamguard.plist")
+            .exists()
+        {
             return true;
         }
     }
@@ -93,14 +96,14 @@ pub fn install_as_service() -> Result<()> {
     // 1. Get current executable path
     let current_exe = std::env::current_exe()?;
     let home = std::env::var("HOME").unwrap_or_else(|_| "/tmp".to_string());
-    
+
     // Use user-local paths to avoid root/system installation
     let support_dir = format!("{}/Library/Application Support/clamguard", home);
     let target_bin = format!("{}/clamguard", support_dir);
     let plist_dir = format!("{}/Library/LaunchAgents", home);
     let plist_path = format!("{}/com.clamguard.plist", plist_dir);
     let log_dir = format!("{}/Library/Logs/clamguard", home);
-    
+
     info!("Installing service to {}...", target_bin);
 
     // 2. Create directories
@@ -110,7 +113,7 @@ pub fn install_as_service() -> Result<()> {
 
     // 3. Copy binary
     fs::copy(&current_exe, &target_bin)?;
-    
+
     // 4. Set permissions
     #[cfg(unix)]
     {
@@ -121,7 +124,8 @@ pub fn install_as_service() -> Result<()> {
     }
 
     // 5. Create plist content
-    let plist_content = format!(r#"<?xml version="1.0" encoding="UTF-8"?>
+    let plist_content = format!(
+        r#"<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
@@ -146,13 +150,19 @@ pub fn install_as_service() -> Result<()> {
     <key>Nice</key>
     <integer>5</integer>
 </dict>
-</plist>"#, target_bin = target_bin, log_dir = log_dir);
+</plist>"#,
+        target_bin = target_bin,
+        log_dir = log_dir
+    );
 
     fs::write(&plist_path, plist_content)?;
 
     // 6. Load service
     // Try to unload first if it was already loaded
-    let _ = Command::new("launchctl").arg("unload").arg(&plist_path).status();
+    let _ = Command::new("launchctl")
+        .arg("unload")
+        .arg(&plist_path)
+        .status();
     let status = Command::new("launchctl")
         .arg("load")
         .arg("-w")
@@ -171,13 +181,17 @@ pub fn uninstall_service() -> Result<()> {
     let home = std::env::var("HOME").unwrap_or_else(|_| "/tmp".to_string());
     let agent_plist = format!("{}/Library/LaunchAgents/com.clamguard.plist", home);
     let user_bin = format!("{}/Library/Application Support/clamguard/clamguard", home);
-    
+
     // 1. Unload and remove user agent
     if Path::new(&agent_plist).exists() {
-        let _ = Command::new("launchctl").arg("unload").arg("-w").arg(&agent_plist).status();
+        let _ = Command::new("launchctl")
+            .arg("unload")
+            .arg("-w")
+            .arg(&agent_plist)
+            .status();
         let _ = fs::remove_file(&agent_plist);
     }
-    
+
     // 2. Remove user binary
     if Path::new(&user_bin).exists() {
         let _ = fs::remove_file(&user_bin);
@@ -186,7 +200,7 @@ pub fn uninstall_service() -> Result<()> {
     // 3. Handle legacy root installation
     let legacy_bin = "/usr/local/bin/clamguard";
     let legacy_daemon = "/Library/LaunchDaemons/com.clamguard.plist";
-    
+
     if Path::new(legacy_bin).exists() || Path::new(legacy_daemon).exists() {
         info!("Legacy root installation detected, requesting privileges to clean up...");
         let script = format!(
@@ -196,7 +210,10 @@ pub fn uninstall_service() -> Result<()> {
             legacy_daemon = legacy_daemon,
             legacy_bin = legacy_bin
         );
-        let osascript = format!("do shell script \"{}\" with administrator privileges", script.replace("\"", "\\\""));
+        let osascript = format!(
+            "do shell script \"{}\" with administrator privileges",
+            script.replace("\"", "\\\"")
+        );
         let _ = Command::new("osascript")
             .arg("-e")
             .arg(osascript)
@@ -205,4 +222,32 @@ pub fn uninstall_service() -> Result<()> {
 
     info!("Service uninstalled.");
     Ok(())
+}
+
+pub fn eject_drive(path: &str) {
+    info!("Attempting to eject drive at: {}", path);
+    // On macOS, diskutil eject is the standard way to unmount and eject a volume.
+    match Command::new("diskutil").arg("eject").arg(path).status() {
+        Ok(status) if status.success() => info!("Successfully ejected {}", path),
+        Ok(status) => error!("Failed to eject {}: exit code {:?}", path, status.code()),
+        Err(e) => error!("Failed to execute diskutil: {}", e),
+    }
+}
+
+pub fn get_clamav_datadir(is_root: bool) -> Option<String> {
+    if let Ok(datadir) = std::env::var("FRESHCLAM_DATADIR") {
+        return Some(datadir);
+    }
+
+    if is_root {
+        None // Use system default
+    } else {
+        let home = std::env::var("HOME").unwrap_or_else(|_| "/tmp".to_string());
+        let user_datadir = format!("{}/Library/Caches/clamguard/clamav", home);
+        if fs::create_dir_all(&user_datadir).is_ok() {
+            Some(user_datadir)
+        } else {
+            None
+        }
+    }
 }

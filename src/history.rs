@@ -1,9 +1,9 @@
+use anyhow::Result;
+use chrono::{DateTime, Duration, Local};
+use log::{error, info};
 use serde::{Deserialize, Serialize};
-use chrono::{DateTime, Local, Duration};
 use std::fs;
 use std::path::PathBuf;
-use log::{info, error};
-use anyhow::Result;
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub enum ScanStatus {
@@ -40,7 +40,10 @@ pub struct History {
 impl History {
     pub fn get_path() -> PathBuf {
         // Use audit log dir as base for now, consistent with where logs are kept
-        PathBuf::from(format!("{}/history.json", crate::audit::get_audit_log_dir()))
+        PathBuf::from(format!(
+            "{}/history.json",
+            crate::audit::get_audit_log_dir()
+        ))
     }
 
     pub fn load() -> Self {
@@ -51,7 +54,7 @@ impl History {
                     Ok(mut h) => {
                         h.prune();
                         h
-                    },
+                    }
                     Err(e) => {
                         error!("Failed to parse history file: {}, starting fresh", e);
                         History::default()
@@ -77,7 +80,13 @@ impl History {
         Ok(())
     }
 
-    pub fn add_entry(&mut self, path: String, status: ScanStatus, details: String, infected_files: Vec<String>) {
+    pub fn add_entry(
+        &mut self,
+        path: String,
+        status: ScanStatus,
+        details: String,
+        infected_files: Vec<String>,
+    ) {
         let entry = ScanEntry {
             timestamp: Local::now(),
             path,
@@ -139,7 +148,7 @@ mod tests {
         });
 
         let csv = history.to_csv().unwrap();
-        
+
         assert!(csv.contains("Timestamp,Path,Status,Details,Infected Files"));
         assert!(csv.contains("/test/path"));
         assert!(csv.contains("Clean"));

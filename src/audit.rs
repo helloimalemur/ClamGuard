@@ -1,7 +1,7 @@
-use std::fs::{self, OpenOptions};
-use std::io::Write;
 use chrono::Local;
 use log::{error, info};
+use std::fs::{self, OpenOptions};
+use std::io::Write;
 
 pub fn get_audit_log_dir() -> String {
     if let Ok(dir) = std::env::var("AUDIT_LOG_DIR") {
@@ -47,10 +47,7 @@ pub fn log_event(event_type: &str, message: &str) {
     }
 
     // Try to write to the audit log file
-    let file_result = OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open(&log_file);
+    let file_result = OpenOptions::new().create(true).append(true).open(&log_file);
 
     match file_result {
         Ok(mut file) => {
@@ -74,25 +71,43 @@ pub fn log_event(event_type: &str, message: &str) {
 }
 
 pub fn log_scan_start(path: &str) {
-    log_event("SCAN_START", &format!("Starting scan of mount point: {}", path));
+    log_event(
+        "SCAN_START",
+        &format!("Starting scan of mount point: {}", path),
+    );
 }
 
 pub fn log_scan_complete(path: &str, virus_found: bool, details: &str) {
     let status = if virus_found { "INFECTED" } else { "CLEAN" };
-    log_event("SCAN_COMPLETE", &format!("Scan of {} finished. Status: {}. Details: {}", path, status, details));
+    log_event(
+        "SCAN_COMPLETE",
+        &format!(
+            "Scan of {} finished. Status: {}. Details: {}",
+            path, status, details
+        ),
+    );
 }
 
 pub fn log_infection(path: &str, details: &str) {
-    log_event("INFECTION_DETECTED", &format!("Malware found on {}: {}", path, details));
+    log_event(
+        "INFECTION_DETECTED",
+        &format!("Malware found on {}: {}", path, details),
+    );
 }
 
 pub fn log_update_start() {
-    log_event("UPDATE_START", "Starting ClamAV database update (freshclam)");
+    log_event(
+        "UPDATE_START",
+        "Starting ClamAV database update (freshclam)",
+    );
 }
 
 pub fn log_update_complete(success: bool, details: &str) {
     let status = if success { "SUCCESS" } else { "FAILED" };
-    log_event("UPDATE_COMPLETE", &format!("ClamAV database update {}. Details: {}", status, details));
+    log_event(
+        "UPDATE_COMPLETE",
+        &format!("ClamAV database update {}. Details: {}", status, details),
+    );
 }
 
 pub fn log_service_start() {

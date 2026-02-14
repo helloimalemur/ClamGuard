@@ -1,24 +1,28 @@
+mod audit;
 mod config;
 mod guard;
-mod scanner;
-mod utils;
-mod audit;
 mod gui;
 mod history;
+mod notifications;
+mod scanner;
+mod utils;
 
+use anyhow::Result;
+use log::{debug, error, info, warn};
 use notify::{Config as NotifyConfig, RecommendedWatcher, RecursiveMode, Watcher};
-use std::path::Path;
 use std::collections::HashMap;
 use std::os::unix::fs::MetadataExt;
+use std::path::Path;
 use std::process::Command;
 use std::sync::{Arc, Mutex};
-use log::{info, error, warn, debug};
-use anyhow::Result;
 
-use crate::guard::{ScanGuard, AppState};
-use crate::scanner::{run_clamscan, run_freshclam};
-use crate::utils::{find_clamscan, find_freshclam, create_icon, is_service_installed, install_as_service, uninstall_service, IconState};
 use crate::config::Config;
+use crate::guard::{AppState, ScanGuard};
+use crate::scanner::{run_clamscan, run_freshclam};
+use crate::utils::{
+    IconState, create_icon, find_clamscan, find_freshclam, install_as_service,
+    is_service_installed, uninstall_service,
+};
 
 #[cfg(target_os = "macos")]
 #[unsafe(link_section = "__TEXT,__info_plist")]
@@ -27,8 +31,8 @@ static INFO_PLIST: [u8; include_bytes!("../Info.plist").len()] = *include_bytes!
 
 #[cfg(target_os = "macos")]
 fn hide_dock_icon() {
-    use objc2_app_kit::{NSApplication, NSApplicationActivationPolicy};
     use objc2::MainThreadMarker;
+    use objc2_app_kit::{NSApplication, NSApplicationActivationPolicy};
     if let Some(mtm) = MainThreadMarker::new() {
         let app = NSApplication::sharedApplication(mtm);
         debug!("Setting macOS activation policy to Accessory");
@@ -38,16 +42,28 @@ fn hide_dock_icon() {
 
 use crate::gui::SettingsApp;
 use crate::history::ScanStatus;
-use tray_icon::{
-    menu::{Menu, MenuItem, MenuEvent, PredefinedMenuItem},
-    TrayIconBuilder, TrayIcon,
-};
-use std::sync::atomic::Ordering;
 use chrono::{Datelike, Timelike};
+use std::sync::atomic::Ordering;
+use tray_icon::{
+    TrayIcon, TrayIconBuilder,
+    menu::{Menu, MenuEvent, MenuItem, PredefinedMenuItem},
+};
 
-fn create_tray_menu(app_state: &AppState) -> (Menu, MenuItem, MenuItem, MenuItem, MenuItem, MenuItem, MenuItem, MenuItem, Option<MenuItem>) {
+fn create_tray_menu(
+    app_state: &AppState,
+) -> (
+    Menu,
+    MenuItem,
+    MenuItem,
+    MenuItem,
+    MenuItem,
+    MenuItem,
+    MenuItem,
+    MenuItem,
+    Option<MenuItem>,
+) {
     let menu = Menu::new();
-    
+
     let mut dismiss_item = None;
     if app_state.infection_found.load(Ordering::SeqCst) {
         let item = MenuItem::new("⚠️ Dismiss Virus Warning", true, None);
@@ -64,9 +80,9 @@ fn create_tray_menu(app_state: &AppState) -> (Menu, MenuItem, MenuItem, MenuItem
     };
     let status_item = MenuItem::new(status_text, false, None);
     let _ = menu.append(&status_item);
-    
+
     let _ = menu.append(&PredefinedMenuItem::separator());
-    
+
     {
         let scans = app_state.active_scans.lock().unwrap();
         if scans.is_empty() {
@@ -79,9 +95,9 @@ fn create_tray_menu(app_state: &AppState) -> (Menu, MenuItem, MenuItem, MenuItem
             }
         }
     }
-    
+
     let _ = menu.append(&PredefinedMenuItem::separator());
-    
+
     let urls_item = MenuItem::new("Configure Webhooks & Settings...", true, None);
     let _ = menu.append(&urls_item);
 
@@ -97,18 +113,28 @@ fn create_tray_menu(app_state: &AppState) -> (Menu, MenuItem, MenuItem, MenuItem
     let installed = is_service_installed();
     let install_item = MenuItem::new("Install as Service", !installed, None);
     let _ = menu.append(&install_item);
-    
+
     let uninstall_item = MenuItem::new("Uninstall Service", installed, None);
     let _ = menu.append(&uninstall_item);
-    
+
     let quit_item = MenuItem::new("Quit", true, None);
     let _ = menu.append(&quit_item);
-    
-    (menu, urls_item, history_item, scheduling_item, scan_item, install_item, uninstall_item, quit_item, dismiss_item)
+
+    (
+        menu,
+        urls_item,
+        history_item,
+        scheduling_item,
+        scan_item,
+        install_item,
+        uninstall_item,
+        quit_item,
+        dismiss_item,
+    )
 }
 
 fn main() -> Result<()> {
-    // Initialize logger to write to stdout/stderr. 
+    // Initialize logger to write to stdout/stderr.
     env_logger::init_from_env(env_logger::Env::default().default_filter_or("info"));
 
     #[cfg(target_os = "macos")]
@@ -172,10 +198,9 @@ fn main() -> Result<()> {
     eframe::run_native(
         "ClamGuard",
         options,
-        Box::new(|cc| {
-            Ok(Box::new(DekApp::new(cc, app_state)))
-        }),
-    ).map_err(|e| anyhow::anyhow!("Eframe error: {}", e))
+        Box::new(|cc| Ok(Box::new(DekApp::new(cc, app_state)))),
+    )
+    .map_err(|e| anyhow::anyhow!("Eframe error: {}", e))
 }
 
 struct DekApp {
@@ -202,7 +227,17 @@ impl DekApp {
             *ctx_lock = Some(cc.egui_ctx.clone());
         }
 
-        let (menu, settings_item, history_item, scheduling_item, scan_item, install_item, uninstall_item, quit_item, dismiss_item) = create_tray_menu(&app_state);
+        let (
+            menu,
+            settings_item,
+            history_item,
+            scheduling_item,
+            scan_item,
+            install_item,
+            uninstall_item,
+            quit_item,
+            dismiss_item,
+        ) = create_tray_menu(&app_state);
 
         let tray = TrayIconBuilder::new()
             .with_menu(Box::new(menu))
@@ -231,7 +266,17 @@ impl DekApp {
     }
 
     fn refresh_tray(&mut self) {
-        let (menu, settings_item, history_item, scheduling_item, scan_item, install_item, uninstall_item, quit_item, dismiss_item) = create_tray_menu(&self.settings.app_state);
+        let (
+            menu,
+            settings_item,
+            history_item,
+            scheduling_item,
+            scan_item,
+            install_item,
+            uninstall_item,
+            quit_item,
+            dismiss_item,
+        ) = create_tray_menu(&self.settings.app_state);
         let _ = self.tray.set_menu(Some(Box::new(menu)));
         self.quit_id = quit_item.id().clone();
         self.install_id = install_item.id().clone();
@@ -263,10 +308,10 @@ impl eframe::App for DekApp {
                 if let Some(path) = rfd::FileDialog::new().pick_folder() {
                     let path_str = path.to_string_lossy().to_string();
                     info!("Starting custom scan for: {}", path_str);
-                    
+
                     let app_state = Arc::clone(&self.settings.app_state);
                     let eject_on_infection = app_state.config.lock().unwrap().eject_on_infection;
-                    
+
                     app_state.add_scan(path_str.clone());
                     let app_state_task = Arc::clone(&app_state);
                     let path_str_task = path_str.clone();
@@ -275,11 +320,24 @@ impl eframe::App for DekApp {
                             path: path_str_task.clone(),
                             app_state: Arc::clone(&app_state_task),
                         };
-                        
-                        match run_clamscan(Arc::clone(&app_state_task), &path_str_task, eject_on_infection) {
+
+                        match run_clamscan(
+                            Arc::clone(&app_state_task),
+                            &path_str_task,
+                            eject_on_infection,
+                        ) {
                             Ok((infected, summary, infected_files)) => {
-                                let status = if infected { ScanStatus::Infected } else { ScanStatus::Clean };
-                                _guard.app_state.add_history_entry(path_str, status, summary, infected_files);
+                                let status = if infected {
+                                    ScanStatus::Infected
+                                } else {
+                                    ScanStatus::Clean
+                                };
+                                _guard.app_state.add_history_entry(
+                                    path_str,
+                                    status,
+                                    summary,
+                                    infected_files,
+                                );
                                 if infected {
                                     _guard.app_state.report_infection();
                                 }
@@ -287,7 +345,12 @@ impl eframe::App for DekApp {
                             Err(e) => {
                                 let err_msg = e.to_string();
                                 error!("Custom ClamAV scan failed for {}: {}", path_str, err_msg);
-                                _guard.app_state.add_history_entry(path_str, ScanStatus::Failed, err_msg, Vec::new());
+                                _guard.app_state.add_history_entry(
+                                    path_str,
+                                    ScanStatus::Failed,
+                                    err_msg,
+                                    Vec::new(),
+                                );
                             }
                         }
                     });
@@ -320,7 +383,11 @@ impl eframe::App for DekApp {
         }
 
         // Check if state changed to update icon and menu
-        let infection_state = self.settings.app_state.infection_found.load(Ordering::SeqCst);
+        let infection_state = self
+            .settings
+            .app_state
+            .infection_found
+            .load(Ordering::SeqCst);
         let active_tasks = self.settings.app_state.active_tasks.load(Ordering::SeqCst);
 
         if infection_state != self.last_infection_state || active_tasks != self.last_active_tasks {
@@ -365,7 +432,8 @@ fn run_service(app_state: Arc<AppState>) -> Result<()> {
     let freshclam_path = find_freshclam();
     if freshclam_path == "freshclam" {
         if Command::new("freshclam").arg("--version").output().is_err() {
-            let warn_msg = "freshclam not found in common paths or PATH. Database updates might fail.";
+            let warn_msg =
+                "freshclam not found in common paths or PATH. Database updates might fail.";
             warn!("{}", warn_msg);
             audit::log_error("WARNING", warn_msg);
         } else {
@@ -424,10 +492,15 @@ fn run_service(app_state: Arc<AppState>) -> Result<()> {
                 if event.kind.is_create() {
                     for path in event.paths {
                         if let Some(path_str) = path.to_str() {
-                            if path.file_name().and_then(|n| n.to_str()).map(|s| s.starts_with('.')).unwrap_or(false) {
+                            if path
+                                .file_name()
+                                .and_then(|n| n.to_str())
+                                .map(|s| s.starts_with('.'))
+                                .unwrap_or(false)
+                            {
                                 continue;
                             }
-                            
+
                             let current_dev = std::fs::metadata(&path).map(|m| m.dev()).ok();
                             if let Some(dev_id) = current_dev {
                                 if let Some(&stored_dev) = scanned_paths.get(path_str) {
@@ -440,18 +513,24 @@ fn run_service(app_state: Arc<AppState>) -> Result<()> {
                                 {
                                     let active = app_state.active_scans.lock().unwrap();
                                     if active.contains_key(path_str) {
-                                        info!("Scan already in progress for {}, skipping", path_str);
+                                        info!(
+                                            "Scan already in progress for {}, skipping",
+                                            path_str
+                                        );
                                         continue;
                                     }
                                 }
-                                
+
                                 info!("Detected new mount in /Volumes: {}", path_str);
-                                audit::log_event("MOUNT_DETECTED", &format!("New mount detected: {}", path_str));
+                                audit::log_event(
+                                    "MOUNT_DETECTED",
+                                    &format!("New mount detected: {}", path_str),
+                                );
                                 scanned_paths.insert(path_str.to_string(), dev_id);
 
                                 let path_to_scan = path_str.to_string();
                                 let app_state_clone = Arc::clone(&app_state);
-                                
+
                                 app_state.add_scan(path_to_scan.clone());
                                 std::thread::spawn(move || {
                                     let _guard = ScanGuard {
@@ -464,20 +543,46 @@ fn run_service(app_state: Arc<AppState>) -> Result<()> {
                                     let path = std::path::Path::new(&path_to_scan);
                                     if path.exists() && path.is_dir() {
                                         info!("Starting ClamAV scan for: {}", path_to_scan);
-                                        let current_eject = _guard.app_state.config.lock().unwrap().eject_on_infection;
-                                        match run_clamscan(Arc::clone(&_guard.app_state), &path_to_scan, current_eject) {
+                                        let current_eject = _guard
+                                            .app_state
+                                            .config
+                                            .lock()
+                                            .unwrap()
+                                            .eject_on_infection;
+                                        match run_clamscan(
+                                            Arc::clone(&_guard.app_state),
+                                            &path_to_scan,
+                                            current_eject,
+                                        ) {
                                             Ok((infected, summary, infected_files)) => {
                                                 info!("ClamAV scan completed for {}", path_to_scan);
-                                                let status = if infected { ScanStatus::Infected } else { ScanStatus::Clean };
-                                                _guard.app_state.add_history_entry(path_to_scan, status, summary, infected_files);
+                                                let status = if infected {
+                                                    ScanStatus::Infected
+                                                } else {
+                                                    ScanStatus::Clean
+                                                };
+                                                _guard.app_state.add_history_entry(
+                                                    path_to_scan,
+                                                    status,
+                                                    summary,
+                                                    infected_files,
+                                                );
                                                 if infected {
                                                     _guard.app_state.report_infection();
                                                 }
                                             }
                                             Err(e) => {
                                                 let err_msg = e.to_string();
-                                                error!("ClamAV scan failed for {}: {}", path_to_scan, err_msg);
-                                                _guard.app_state.add_history_entry(path_to_scan, ScanStatus::Failed, err_msg, Vec::new());
+                                                error!(
+                                                    "ClamAV scan failed for {}: {}",
+                                                    path_to_scan, err_msg
+                                                );
+                                                _guard.app_state.add_history_entry(
+                                                    path_to_scan,
+                                                    ScanStatus::Failed,
+                                                    err_msg,
+                                                    Vec::new(),
+                                                );
                                             }
                                         }
                                     }
@@ -489,12 +594,15 @@ fn run_service(app_state: Arc<AppState>) -> Result<()> {
                     for path in event.paths {
                         if let Some(path_str) = path.to_str() {
                             if scanned_paths.remove(path_str).is_some() {
-                                info!("Entry removed from /Volumes, cleared from scanned cache: {}", path_str);
+                                info!(
+                                    "Entry removed from /Volumes, cleared from scanned cache: {}",
+                                    path_str
+                                );
                             }
                         }
                     }
                 }
-            },
+            }
             Err(e) => error!("watch error: {:?}", e),
         }
     }
@@ -535,7 +643,9 @@ fn run_scheduler(app_state: Arc<AppState>) {
         if now.hour() == hour && now.minute() == minute {
             let should_run = match config.scheduled_scan_interval {
                 ScheduleInterval::Daily => true,
-                ScheduleInterval::Weekly => now.weekday().num_days_from_sunday() == config.scheduled_scan_day,
+                ScheduleInterval::Weekly => {
+                    now.weekday().num_days_from_sunday() == config.scheduled_scan_day
+                }
                 ScheduleInterval::None => false,
             };
 
@@ -544,7 +654,9 @@ fn run_scheduler(app_state: Arc<AppState>) {
                 let already_ran = {
                     let history = app_state.history.lock().unwrap();
                     history.entries.iter().any(|e| {
-                        e.path == "/" && e.timestamp.date_naive() == today && e.status != ScanStatus::Failed
+                        e.path == "/"
+                            && e.timestamp.date_naive() == today
+                            && e.status != ScanStatus::Failed
                     })
                 };
 
@@ -554,7 +666,7 @@ fn run_scheduler(app_state: Arc<AppState>) {
                 }
 
                 info!("Starting scheduled system scan...");
-                
+
                 let app_state_clone = Arc::clone(&app_state);
                 let eject_on_infection = config.eject_on_infection;
                 let path_to_scan = "/".to_string();
@@ -565,11 +677,24 @@ fn run_scheduler(app_state: Arc<AppState>) {
                         path: path_to_scan.clone(),
                         app_state: Arc::clone(&app_state_clone),
                     };
-                    
-                    match run_clamscan(Arc::clone(&_guard.app_state), &path_to_scan, eject_on_infection) {
+
+                    match run_clamscan(
+                        Arc::clone(&_guard.app_state),
+                        &path_to_scan,
+                        eject_on_infection,
+                    ) {
                         Ok((infected, summary, infected_files)) => {
-                            let status = if infected { ScanStatus::Infected } else { ScanStatus::Clean };
-                            _guard.app_state.add_history_entry(path_to_scan, status, summary, infected_files);
+                            let status = if infected {
+                                ScanStatus::Infected
+                            } else {
+                                ScanStatus::Clean
+                            };
+                            _guard.app_state.add_history_entry(
+                                path_to_scan,
+                                status,
+                                summary,
+                                infected_files,
+                            );
                             if infected {
                                 _guard.app_state.report_infection();
                             }
@@ -577,11 +702,16 @@ fn run_scheduler(app_state: Arc<AppState>) {
                         Err(e) => {
                             let err_msg = e.to_string();
                             error!("Scheduled ClamAV scan failed: {}", err_msg);
-                            _guard.app_state.add_history_entry(path_to_scan, ScanStatus::Failed, err_msg, Vec::new());
+                            _guard.app_state.add_history_entry(
+                                path_to_scan,
+                                ScanStatus::Failed,
+                                err_msg,
+                                Vec::new(),
+                            );
                         }
                     }
                 });
-                
+
                 // Sleep for a bit more to ensure we don't trigger again in the same minute
                 std::thread::sleep(std::time::Duration::from_secs(61));
             }

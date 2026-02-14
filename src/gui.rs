@@ -1,7 +1,7 @@
-use eframe::egui;
 use crate::config::Config;
-use std::sync::Arc;
 use crate::history::ScanStatus;
+use eframe::egui;
+use std::sync::Arc;
 
 #[derive(PartialEq)]
 pub enum GuiTab {
@@ -24,8 +24,8 @@ pub struct SettingsApp {
 impl SettingsApp {
     pub fn new(app_state: Arc<crate::guard::AppState>) -> Self {
         let config = app_state.config.lock().unwrap().clone();
-        Self { 
-            config, 
+        Self {
+            config,
             app_state,
             visible: false,
             current_tab: GuiTab::Settings,
@@ -63,9 +63,12 @@ impl eframe::App for SettingsApp {
                         Ok(path) => {
                             log::info!("History successfully exported to {:?}", path);
                             self.status_message = Some((
-                                format!("Exported to {}", path.file_name().and_then(|n| n.to_str()).unwrap_or("file")),
+                                format!(
+                                    "Exported to {}",
+                                    path.file_name().and_then(|n| n.to_str()).unwrap_or("file")
+                                ),
                                 egui::Color32::GREEN,
-                                std::time::Instant::now()
+                                std::time::Instant::now(),
                             ));
                         }
                         Err(e) => {
@@ -73,7 +76,7 @@ impl eframe::App for SettingsApp {
                             self.status_message = Some((
                                 format!("Export failed: {}", e),
                                 egui::Color32::RED,
-                                std::time::Instant::now()
+                                std::time::Instant::now(),
                             ));
                         }
                     }
@@ -126,14 +129,17 @@ impl SettingsApp {
 
         ui.group(|ui| {
             ui.label("General Settings");
-            ui.checkbox(&mut self.config.eject_on_infection, "Eject disk immediately on infection found");
+            ui.checkbox(
+                &mut self.config.eject_on_infection,
+                "Eject disk immediately on infection found",
+            );
         });
 
         ui.add_space(10.0);
 
         ui.group(|ui| {
             ui.label("Notifications (Webhooks)");
-            
+
             ui.horizontal(|ui| {
                 ui.label("Discord Webhook:");
                 ui.text_edit_singleline(&mut self.config.discord_webhooks);
@@ -151,7 +157,9 @@ impl SettingsApp {
             ui.label("Scanner Settings");
             ui.horizontal(|ui| {
                 ui.label("Freshclam update interval (hours):");
-                ui.add(egui::DragValue::new(&mut self.config.freshclam_interval_hours).range(1..=168));
+                ui.add(
+                    egui::DragValue::new(&mut self.config.freshclam_interval_hours).range(1..=168),
+                );
             });
             ui.small("Interval for updating ClamAV virus definitions.");
         });
@@ -181,9 +189,21 @@ impl SettingsApp {
         ui.group(|ui| {
             ui.label("Schedule Frequency");
             ui.horizontal(|ui| {
-                ui.selectable_value(&mut self.config.scheduled_scan_interval, crate::config::ScheduleInterval::None, "None");
-                ui.selectable_value(&mut self.config.scheduled_scan_interval, crate::config::ScheduleInterval::Daily, "Daily");
-                ui.selectable_value(&mut self.config.scheduled_scan_interval, crate::config::ScheduleInterval::Weekly, "Weekly");
+                ui.selectable_value(
+                    &mut self.config.scheduled_scan_interval,
+                    crate::config::ScheduleInterval::None,
+                    "None",
+                );
+                ui.selectable_value(
+                    &mut self.config.scheduled_scan_interval,
+                    crate::config::ScheduleInterval::Daily,
+                    "Daily",
+                );
+                ui.selectable_value(
+                    &mut self.config.scheduled_scan_interval,
+                    crate::config::ScheduleInterval::Weekly,
+                    "Weekly",
+                );
             });
         });
 
@@ -213,13 +233,41 @@ impl SettingsApp {
                                 _ => "Unknown",
                             })
                             .show_ui(ui, |ui| {
-                                ui.selectable_value(&mut self.config.scheduled_scan_day, 0, "Sunday");
-                                ui.selectable_value(&mut self.config.scheduled_scan_day, 1, "Monday");
-                                ui.selectable_value(&mut self.config.scheduled_scan_day, 2, "Tuesday");
-                                ui.selectable_value(&mut self.config.scheduled_scan_day, 3, "Wednesday");
-                                ui.selectable_value(&mut self.config.scheduled_scan_day, 4, "Thursday");
-                                ui.selectable_value(&mut self.config.scheduled_scan_day, 5, "Friday");
-                                ui.selectable_value(&mut self.config.scheduled_scan_day, 6, "Saturday");
+                                ui.selectable_value(
+                                    &mut self.config.scheduled_scan_day,
+                                    0,
+                                    "Sunday",
+                                );
+                                ui.selectable_value(
+                                    &mut self.config.scheduled_scan_day,
+                                    1,
+                                    "Monday",
+                                );
+                                ui.selectable_value(
+                                    &mut self.config.scheduled_scan_day,
+                                    2,
+                                    "Tuesday",
+                                );
+                                ui.selectable_value(
+                                    &mut self.config.scheduled_scan_day,
+                                    3,
+                                    "Wednesday",
+                                );
+                                ui.selectable_value(
+                                    &mut self.config.scheduled_scan_day,
+                                    4,
+                                    "Thursday",
+                                );
+                                ui.selectable_value(
+                                    &mut self.config.scheduled_scan_day,
+                                    5,
+                                    "Friday",
+                                );
+                                ui.selectable_value(
+                                    &mut self.config.scheduled_scan_day,
+                                    6,
+                                    "Saturday",
+                                );
                             });
                     });
                 }
@@ -265,12 +313,15 @@ impl SettingsApp {
                                 ui.small(format!("Scanning: {}", state.current_file))
                                     .on_hover_text(&state.current_file);
                             });
-                            
-                            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                                if ui.button("Cancel Scan").clicked() {
-                                    to_cancel = Some(path.clone());
-                                }
-                            });
+
+                            ui.with_layout(
+                                egui::Layout::right_to_left(egui::Align::Center),
+                                |ui| {
+                                    if ui.button("Cancel Scan").clicked() {
+                                        to_cancel = Some(path.clone());
+                                    }
+                                },
+                            );
                         });
                     });
                     ui.add_space(5.0);
@@ -292,13 +343,13 @@ impl SettingsApp {
                     if let Some(path) = rfd::FileDialog::new()
                         .set_file_name("scan_history.csv")
                         .add_filter("CSV", &["csv"])
-                        .save_file() {
-                        
+                        .save_file()
+                    {
                         log::info!("User selected export path: {:?}", path);
                         self.status_message = Some((
                             "Exporting... please wait".to_string(),
                             egui::Color32::YELLOW,
-                            std::time::Instant::now()
+                            std::time::Instant::now(),
                         ));
 
                         let app_state = Arc::clone(&self.app_state);
@@ -314,7 +365,7 @@ impl SettingsApp {
                             if let Ok(mut status_lock) = app_state.export_status.lock() {
                                 *status_lock = Some(result);
                             }
-                            
+
                             // Trigger repaint to show the result
                             if let Ok(ctx_lock) = app_state.egui_ctx.lock() {
                                 if let Some(ctx) = ctx_lock.as_ref() {
@@ -334,28 +385,47 @@ impl SettingsApp {
             .auto_shrink([false, false])
             .stick_to_bottom(false)
             .show(ui, |ui| {
-            let history = self.app_state.history.lock().unwrap();
-            if history.entries.is_empty() {
-                ui.label("No scan history recorded yet.");
-            } else {
-                for entry in history.entries.iter().rev() {
-                    ui.group(|ui| {
-                        ui.horizontal(|ui| {
-                            ui.label(entry.timestamp.format("%Y-%m-%d %H:%M:%S").to_string());
-                            ui.separator();
-                            match entry.status {
-                                ScanStatus::Clean => ui.colored_label(egui::Color32::GREEN, "CLEAN"),
-                                ScanStatus::Infected => ui.colored_label(egui::Color32::RED, "INFECTED"),
-                                ScanStatus::Failed => ui.colored_label(egui::Color32::YELLOW, "FAILED"),
-                            };
-                        });
-                        ui.label(format!("Path: {}", entry.path));
+                let history = self.app_state.history.lock().unwrap();
+                if history.entries.is_empty() {
+                    ui.label("No scan history recorded yet.");
+                } else {
+                    for entry in history.entries.iter().rev() {
+                        ui.group(|ui| {
+                            ui.horizontal(|ui| {
+                                ui.label(entry.timestamp.format("%Y-%m-%d %H:%M:%S").to_string());
+                                ui.separator();
+                                match entry.status {
+                                    ScanStatus::Clean => {
+                                        ui.colored_label(egui::Color32::GREEN, "CLEAN")
+                                    }
+                                    ScanStatus::Infected => {
+                                        ui.colored_label(egui::Color32::RED, "INFECTED")
+                                    }
+                                    ScanStatus::Failed => {
+                                        ui.colored_label(egui::Color32::YELLOW, "FAILED")
+                                    }
+                                };
+                            });
+                            ui.label(format!("Path: {}", entry.path));
 
-                        if !entry.infected_files.is_empty() {
-                            let infected_id = ui.make_persistent_id(format!("infected_{}", entry.timestamp.timestamp_nanos_opt().unwrap_or(0)));
-                            egui::collapsing_header::CollapsingState::load_with_default_open(ui.ctx(), infected_id, false)
+                            if !entry.infected_files.is_empty() {
+                                let infected_id = ui.make_persistent_id(format!(
+                                    "infected_{}",
+                                    entry.timestamp.timestamp_nanos_opt().unwrap_or(0)
+                                ));
+                                egui::collapsing_header::CollapsingState::load_with_default_open(
+                                    ui.ctx(),
+                                    infected_id,
+                                    false,
+                                )
                                 .show_header(ui, |ui| {
-                                    ui.colored_label(egui::Color32::LIGHT_RED, format!("⚠️ Infected Files ({})", entry.infected_files.len()));
+                                    ui.colored_label(
+                                        egui::Color32::LIGHT_RED,
+                                        format!(
+                                            "⚠️ Infected Files ({})",
+                                            entry.infected_files.len()
+                                        ),
+                                    );
                                 })
                                 .body(|ui| {
                                     for file in &entry.infected_files {
@@ -365,22 +435,29 @@ impl SettingsApp {
                                         });
                                     }
                                 });
-                        }
+                            }
 
-                        if !entry.details.is_empty() {
-                            let details_id = ui.make_persistent_id(format!("details_{}", entry.timestamp.timestamp_nanos_opt().unwrap_or(0)));
-                            egui::collapsing_header::CollapsingState::load_with_default_open(ui.ctx(), details_id, false)
+                            if !entry.details.is_empty() {
+                                let details_id = ui.make_persistent_id(format!(
+                                    "details_{}",
+                                    entry.timestamp.timestamp_nanos_opt().unwrap_or(0)
+                                ));
+                                egui::collapsing_header::CollapsingState::load_with_default_open(
+                                    ui.ctx(),
+                                    details_id,
+                                    false,
+                                )
                                 .show_header(ui, |ui| {
                                     ui.label("Details");
                                 })
                                 .body(|ui| {
                                     ui.label(&entry.details);
                                 });
-                        }
-                    });
-                    ui.add_space(5.0);
+                            }
+                        });
+                        ui.add_space(5.0);
+                    }
                 }
-            }
-        });
+            });
     }
 }
