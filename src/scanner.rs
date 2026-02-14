@@ -1,3 +1,4 @@
+#[allow(unused)]
 use crate::config::Config;
 use crate::guard::AppState;
 use crate::utils::{find_clamscan, find_freshclam};
@@ -5,6 +6,7 @@ use crate::{audit, notifications, utils};
 use anyhow::Result;
 use log::{error, info, warn};
 use regex::Regex;
+#[allow(unused)]
 use serde::Serialize;
 use std::collections::HashSet;
 use std::fs;
