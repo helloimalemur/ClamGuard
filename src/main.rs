@@ -63,6 +63,7 @@ fn create_tray_menu(
     Option<MenuItem>,
 ) {
     let menu = Menu::new();
+    let cfg = app_state.config.lock().unwrap().clone();
 
     let mut dismiss_item = None;
     if app_state.infection_found.load(Ordering::SeqCst) {
@@ -115,10 +116,14 @@ fn create_tray_menu(
     let _ = menu.append(&install_item);
 
     let uninstall_item = MenuItem::new("Uninstall Service", installed, None);
-    let _ = menu.append(&uninstall_item);
+    if cfg.show_uninstall_button {
+        let _ = menu.append(&uninstall_item);
+    }
 
     let quit_item = MenuItem::new("Quit", true, None);
-    let _ = menu.append(&quit_item);
+    if cfg.show_quit_button {
+        let _ = menu.append(&quit_item);
+    }
 
     (
         menu,
@@ -216,6 +221,8 @@ struct DekApp {
     dismiss_id: Option<tray_icon::menu::MenuId>,
     last_infection_state: bool,
     last_active_tasks: usize,
+    last_show_uninstall_button: bool,
+    last_show_quit_button: bool,
 }
 
 impl DekApp {
@@ -248,6 +255,7 @@ impl DekApp {
 
         let infection_state = app_state.infection_found.load(Ordering::SeqCst);
         let active_tasks = app_state.active_tasks.load(Ordering::SeqCst);
+        let cfg = app_state.config.lock().unwrap().clone();
 
         Self {
             settings: SettingsApp::new(app_state),
@@ -262,6 +270,8 @@ impl DekApp {
             dismiss_id: dismiss_item.map(|i| i.id().clone()),
             last_infection_state: infection_state,
             last_active_tasks: active_tasks,
+            last_show_uninstall_button: cfg.show_uninstall_button,
+            last_show_quit_button: cfg.show_quit_button,
         }
     }
 
@@ -286,6 +296,9 @@ impl DekApp {
         self.scheduling_id = scheduling_item.id().clone();
         self.scan_id = scan_item.id().clone();
         self.dismiss_id = dismiss_item.map(|i| i.id().clone());
+        let cfg = self.settings.app_state.config.lock().unwrap().clone();
+        self.last_show_uninstall_button = cfg.show_uninstall_button;
+        self.last_show_quit_button = cfg.show_quit_button;
     }
 }
 
@@ -382,15 +395,22 @@ impl eframe::App for DekApp {
             }
         }
 
-        // Check if state changed to update icon and menu
+        // Check if state or visibility flags changed to update icon and menu
         let infection_state = self
             .settings
             .app_state
             .infection_found
             .load(Ordering::SeqCst);
         let active_tasks = self.settings.app_state.active_tasks.load(Ordering::SeqCst);
+        let cfg = self.settings.app_state.config.lock().unwrap().clone();
 
-        if infection_state != self.last_infection_state || active_tasks != self.last_active_tasks {
+        let flags_changed = cfg.show_uninstall_button != self.last_show_uninstall_button
+            || cfg.show_quit_button != self.last_show_quit_button;
+
+        if infection_state != self.last_infection_state
+            || active_tasks != self.last_active_tasks
+            || flags_changed
+        {
             let state = if infection_state {
                 IconState::Infected
             } else if active_tasks > 0 {

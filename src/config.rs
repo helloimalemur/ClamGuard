@@ -26,6 +26,8 @@ pub struct Config {
     pub scheduled_scan_interval: ScheduleInterval,
     pub scheduled_scan_time: String, // HH:MM
     pub scheduled_scan_day: u32,     // 0-6 (Sun-Sat)
+    pub show_uninstall_button: bool,
+    pub show_quit_button: bool,
 }
 
 impl Default for Config {
@@ -38,6 +40,8 @@ impl Default for Config {
             scheduled_scan_interval: ScheduleInterval::None,
             scheduled_scan_time: "02:00".to_string(),
             scheduled_scan_day: 0,
+            show_uninstall_button: false,
+            show_quit_button: false,
         }
     }
 }
@@ -120,6 +124,12 @@ impl Config {
             if let Ok(day) = val.parse::<u32>() {
                 config.scheduled_scan_day = day;
             }
+        }
+        if let Ok(val) = std::env::var("SHOW_UNINSTALL_BUTTON") {
+            config.show_uninstall_button = val.to_lowercase() == "true";
+        }
+        if let Ok(val) = std::env::var("SHOW_QUIT_BUTTON") {
+            config.show_quit_button = val.to_lowercase() == "true";
         }
 
         config

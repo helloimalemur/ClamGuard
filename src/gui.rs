@@ -133,6 +133,15 @@ impl SettingsApp {
                 &mut self.config.eject_on_infection,
                 "Eject disk immediately on infection found",
             );
+            ui.add_space(5.0);
+            ui.checkbox(
+                &mut self.config.show_uninstall_button,
+                "Show 'Uninstall Service' in tray menu",
+            );
+            ui.checkbox(
+                &mut self.config.show_quit_button,
+                "Show 'Quit' in tray menu",
+            );
         });
 
         ui.add_space(10.0);
